@@ -6,7 +6,7 @@ class RAGChunksAndSrc(pydantic.BaseModel):
 class RAGUpsertResult(pydantic.BaseModel):
     inngested:int
 
-class RAGSearchResulr(pydantic.BaseModel):
+class RAGSearchResult(pydantic.BaseModel):
     contexts:list[str]
     sources:list[str]
 class RAGQueryResult(pydantic.BaseModel):
