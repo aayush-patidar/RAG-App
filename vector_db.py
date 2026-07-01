@@ -2,11 +2,11 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
 class qdrantStorage:
-    def __init__(self, url="http://localhost:6333", collections="docs", dim=3072):
+    def __init__(self, url="http://localhost:6333", collection="docs", dim=3072):
         self.client = QdrantClient(url=url, timeout=30)
-        self.collection = collections
+        self.collection = collection
 
-        if not self.client.collection_exists(self.collection):
+        if not self.client.collection_exists(collection_name=self.collection):
             self.client.create_collection(
                 collection_name=self.collection,
                 vectors_config=VectorParams(
@@ -16,6 +16,9 @@ class qdrantStorage:
             )
 
     def upsert(self, ids, vectors, payloads):
+        if not ids:
+            raise ValueError("No vectors to upsert.")
+
         points = [
             PointStruct(
                 id=ids[i],
@@ -28,12 +31,13 @@ class qdrantStorage:
         self.client.upsert(
             collection_name=self.collection,
             points=points,
+            wait=True,
         )
 
-    def search(self, quert_vector, top_k: int = 5):
+    def search(self, query_vector, top_k=5):
         results = self.client.query_points(
             collection_name=self.collection,
-            query=quert_vector,
+            query=query_vector,
             limit=top_k,
             with_payload=True,
         ).points
@@ -41,11 +45,11 @@ class qdrantStorage:
         contexts = []
         sources = set()
 
-        for r in results:
-            payload = r.payload or {}
+        for point in results:
+            payload = point.payload or {}
 
-            text = payload.get("text", "")
-            source = payload.get("source", "")
+            text = payload.get("text")
+            source = payload.get("source")
 
             if text:
                 contexts.append(text)
