@@ -1,3 +1,3 @@
-import uuid
+import inngest.experimental.ai as ai
 
-print(uuid.uuid5(uuid.NAMESPACE_URL, "hello"))
+print(dir(ai))
