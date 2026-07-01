@@ -2,6 +2,7 @@ import logging
 from fastapi import FastAPI
 import inngest
 import inngest.fast_api
+from google import genai
 from inngest.experimental import ai
 from dotenv import load_dotenv
 import uuid
@@ -50,49 +51,63 @@ async def rag_ingest_pdf(ctx:inngest.Context):
     fn_id="RAG: Query PDF",
     trigger=inngest.TriggerEvent(event="rag/query_pdf_ai")
 )
-async def rag_query_pdf_ai(ctx:inngest.Context):
+async def rag_query_pdf_ai(ctx: inngest.Context):
+
     def _search(question: str, top_k: int = 5) -> RAGSearchResult:
         query_vec = embed_texts([question])[0]
-        store = qdrantStorage() 
-        found = store.search(query_vec, top_k)
-        return RAGSearchResult(contexts=found["contexts"],sources=found["sources"]
-    )
-    question=ctx.event.data["question"]
-    top_k=int(ctx.event.data.get("top_k",5))
 
-    found=await ctx.step.run("embed-and-search",lambda: _search(question,top_k),output_type=RAGSearchResult)
-    
+        store = qdrantStorage()
+
+        found = store.search(query_vec, top_k)
+
+        return RAGSearchResult(
+            contexts=found["contexts"],
+            sources=found["sources"]
+        )
+
+    question = ctx.event.data["question"]
+    top_k = int(ctx.event.data.get("top_k", 5))
+
+    found = await ctx.step.run(
+        "embed-and-search",
+        lambda: _search(question, top_k),
+        output_type=RAGSearchResult,
+    )
+
     context_block = "\n\n".join(f"- {c}" for c in found.contexts)
-    user_content = (
-        "Use the following context to answer the question.\n\n"
-        f"Context:\n{context_block}\n\n"
-        f"Question: {question}\n"   
-        "Answer concisely using the context above."
+
+    user_content = f"""
+You are a helpful AI assistant.
+
+Use ONLY the context below to answer the user's question.
+
+If the answer is not present in the context, reply:
+"I couldn't find that information in the provided documents."
+
+Context:
+{context_block}
+
+Question:
+{question}
+"""
+
+    client = genai.Client(
+        api_key=os.getenv("GEMINI_API_KEY")
     )
-    adapter = ai.google.Adapter(
-    auth_key=os.getenv("GEMINI_API_KEY"),
-    model="gemini-2.5-flash"
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash-lite",
+        contents=user_content,
     )
-    res=await ctx.step.ai.infer(
-        "llm-answer",
-        adapter=adapter,
-        body={
-            "max_tokens": 1024,
-            "temperature": 0.2,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You answer questions using only the provided context."
-                },
-                {
-                    "role": "user",
-                    "content": user_content,
-                }
-            ]
-        }
-    )
-    answer=res["choices"][0]["messages"]["content"].strip()
-    return {"answer":answer,"sources":found.sources,"num_contexts":len(found.contexts)}
+
+    answer = response.text.strip()
+
+    return {
+        "answer": answer,
+        "sources": found.sources,
+        "num_contexts": len(found.contexts),
+    }
+   
 
 inngest.fast_api.serve(app,inngest_client,[rag_ingest_pdf,rag_query_pdf_ai])
 
