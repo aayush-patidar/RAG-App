@@ -1,22 +1,28 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
+# Secrets
+.env
 
-# Virtual environment
+# Python virtual environments
 .venv/
 venv/
 
-# Environment variables
-.env
+# Python cache
+__pycache__/
+*.py[cod]
 
-# IDE
+# Qdrant local database data
+qdrant_storage/
+
+# Uploaded user PDFs
+uploads/
+*.pdf
+
+# Streamlit cache
+.streamlit/
+
+# VS Code / IDE
 .vscode/
 .idea/
 
-# Qdrant local storage
-qdrant_storage/
-
-# OS
+# OS files
 .DS_Store
 Thumbs.db

@@ -1,13 +1,17 @@
-from google import genai
-from pathlib import Path
-from dotenv import load_dotenv
-from llama_index.readers.file import PDFReader
-from llama_index.core.node_parser import SentenceSplitter
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+from google import genai
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.readers.file import PDFReader
+
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
 EMBED_MODEL = "gemini-embedding-001"
 EMBED_DIM = 3072
@@ -17,8 +21,11 @@ splitter = SentenceSplitter(
     chunk_overlap=200,
 )
 
+
 def load_and_chunk_pdf(path: str) -> list[str]:
-    docs = PDFReader().load_data(file=Path(path))
+    docs = PDFReader().load_data(
+        file=Path(path)
+    )
 
     texts = [
         doc.text.strip()
@@ -29,11 +36,16 @@ def load_and_chunk_pdf(path: str) -> list[str]:
     chunks = []
 
     for text in texts:
-        chunks.extend(splitter.split_text(text))
+        chunks.extend(
+            splitter.split_text(text)
+        )
 
-    chunks = [chunk.strip() for chunk in chunks if chunk.strip()]
+    return [
+        chunk.strip()
+        for chunk in chunks
+        if chunk.strip()
+    ]
 
-    return chunks
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
@@ -47,6 +59,8 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
             contents=text,
         )
 
-        embeddings.append(response.embeddings[0].values)
+        embeddings.append(
+            response.embeddings[0].values
+        )
 
     return embeddings

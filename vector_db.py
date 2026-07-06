@@ -1,5 +1,13 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance, PointStruct
+from qdrant_client.models import (
+    VectorParams,
+    Distance,
+    PointStruct,
+    Filter,
+    FieldCondition,
+    MatchValue,
+)
+
 
 class qdrantStorage:
     def __init__(self, url="http://localhost:6333", collection="docs", dim=3072):
@@ -34,10 +42,20 @@ class qdrantStorage:
             wait=True,
         )
 
-    def search(self, query_vector, top_k=5):
+    def search(self, query_vector, user_id: str, top_k: int =5):
+        user_filter = Filter(
+            must=[
+                FieldCondition(
+                    key="user_id",
+                    match=MatchValue(value=user_id),
+                )
+            ]
+        )
+
         results = self.client.query_points(
             collection_name=self.collection,
             query=query_vector,
+            query_filter=user_filter,
             limit=top_k,
             with_payload=True,
         ).points
